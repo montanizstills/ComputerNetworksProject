@@ -1,14 +1,14 @@
 from flask import Flask
 
+from tcp_helper import run_server
+
 app = Flask(__name__)
 
 
 @app.route('/')
 def hello_world():
-    return """
-    <button> Hello, World! </button>
-    """
+    return run_server('localhost', 11000)
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+    app.run(host='localhost', port=8080)
