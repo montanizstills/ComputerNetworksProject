@@ -11,5 +11,5 @@ def hello_world():
 
 
 if __name__ == '__main__':
-    app.run(host='localhost', port=9688)
-    # run_server('0.0.0.0', 11000)
+    app.run(debug=True, host='localhost', port=1000)
+
