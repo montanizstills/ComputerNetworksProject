@@ -12,4 +12,4 @@ def hello_world():
 
 if __name__ == '__main__':
     # app.run(host='localhost', port=8080)
-    run_server('localhost', 11000)
+    run_server('0.0.0.0', 11000)
