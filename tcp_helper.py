@@ -1,4 +1,5 @@
 from socket import *
+import threading
 
 
 def create_socket():
@@ -6,13 +7,13 @@ def create_socket():
     return socket_out
 
 
-def client_connect(server_name: str, server_port: str):
-    client_socket = socket(AF_INET, SOCK_STREAM)
+def client_connect(server_name: str, server_port: int):
+    client_socket = create_socket()
     client_socket.connect((server_name, server_port))
     return client_socket
 
 
-def server_connect(server_name, server_port: str):
+def server_connect(server_name, server_port: int):
     server_socket = create_socket()
     server_socket.bind((server_name, server_port))
     server_socket.listen(1)
@@ -25,7 +26,7 @@ def server_connect(server_name, server_port: str):
 
 
 def send_msg(socket, msg: str):
-    socket.send(msg.encode('utf-8'))
+    socket.sendall(msg.encode('utf-8'))
 
 
 def rcv_msg(socket, buff_size: int = 1024):
@@ -36,23 +37,56 @@ def rcv_msg(socket, buff_size: int = 1024):
     )
     # to broadcast to all users you can "hack" by printing rcvd_msg here
     # print(receive_message(rcvd_msg))
-    return rcvd_msg.decode('utf-8')
+    return rcvd_msg
 
 
 def run_client(server_name: str, server_port: int):
-    while True:
-        client_socket = client_connect(server_name, server_port)
-        sentence = input('Input lowercase sentence:')
-        send_msg(client_socket, sentence)
+    with client_connect(server_name,server_port) as client_socket:
+        while True:
+            message = input("Enter message to send: ")
+            send_msg(client_socket, message)
+            server_response = rcv_msg(client_socket, 1024)
+            print(f"Received from server: {server_response}")
+
 
 
 def run_server(server_name: str, server_port: int):
     server_socket = server_connect(server_name, server_port)
-    while True:
-        connection_socket, addr = server_socket.accept()
-        sentence = connection_socket.recv(1024)
-        print('Message from client: ' + sentence.decode('utf-8'))
+    connection_socket, addr = server_socket.accept()
 
-# if __name__ == '__main__':
-#     run_server(11000)
-#     run_client('localhost', 11000)
+    while True:
+        sentence = rcv_msg(connection_socket, 1024)
+        print(f'Message from {addr}: ' + sentence)
+        sentence = sentence.upper()
+        connection_socket.send(sentence.encode('utf-8'))
+
+    # """ listen here  on <host> for <incoming ip request> at <port> """
+    # with server_connect(server_name, server_port) as server_socket:
+    #     """
+    #       Thread: if server accepts a connection:
+    #                 then create a new thread to handle the connection
+    #                 t1 maintains TCP connection with <client> and sends/receives data
+    #
+    #                 when client disconnects:
+    #                  t1 closes the connection (by killing thread)
+    #     """
+    #     with server_socket.accept() as (conn, addr):
+    #         while True:
+    #             sentence = rcv_msg(conn, 1024)
+    #             print(f'Message from {addr}: ' + sentence)
+    #             sentence = sentence.upper()
+    #             send_msg(server_socket, sentence)
+
+
+def tcp_client(host='127.0.0.1', port=12345):
+    thread = threading.Thread(
+        target=run_client, args=(host, port)
+    )
+    thread.start()
+
+
+def tcp_server(host='0.0.0.0', port=12345):
+    thread = threading.Thread(
+        target=run_server, args=(host, port)
+    )
+    thread.start()
