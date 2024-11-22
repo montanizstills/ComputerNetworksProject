@@ -35,8 +35,6 @@ def rcv_msg(socket, buff_size: int = 1024):
         recv(buff_size).
         decode('utf-8')
     )
-    # to broadcast to all users you can "hack" by printing rcvd_msg here
-    # print(receive_message(rcvd_msg))
     return rcvd_msg
 
 
@@ -51,31 +49,29 @@ def run_client(server_name: str, server_port: int):
 
 
 def run_server(server_name: str, server_port: int):
-    server_socket = server_connect(server_name, server_port)
-    connection_socket, addr = server_socket.accept()
+    """ listen here  on <host> for <incoming ip request> at <port> """
+    with server_connect(server_name, server_port) as server_socket:
+        """
+          Thread: if server accepts a connection:
+                    then create a new thread to handle the connection
+                    t1 maintains TCP connection with <client> and sends/receives data
 
-    while True:
-        sentence = rcv_msg(connection_socket, 1024)
-        print(f'Message from {addr}: ' + sentence)
-        sentence = sentence.upper()
-        connection_socket.send(sentence.encode('utf-8'))
+                    when client disconnects:
+                     t1 closes the connection (by killing thread)
+        """
+        # with server_socket.accept() as (conn, addr):
+        #     while True:
+        #         sentence = rcv_msg(conn, 1024)
+        #         print(f'Message from {addr}: ' + sentence)
+        #         sentence = sentence.upper()
+        #         send_msg(server_socket, sentence)
+        while True:
+            conn, addr = server_socket.accept()
+            sentence = rcv_msg(conn, 1024)
+            print(f'Message from {addr}: ' + sentence)
+            sentence = sentence.upper()
+            send_msg(server_socket, sentence)
 
-    # """ listen here  on <host> for <incoming ip request> at <port> """
-    # with server_connect(server_name, server_port) as server_socket:
-    #     """
-    #       Thread: if server accepts a connection:
-    #                 then create a new thread to handle the connection
-    #                 t1 maintains TCP connection with <client> and sends/receives data
-    #
-    #                 when client disconnects:
-    #                  t1 closes the connection (by killing thread)
-    #     """
-    #     with server_socket.accept() as (conn, addr):
-    #         while True:
-    #             sentence = rcv_msg(conn, 1024)
-    #             print(f'Message from {addr}: ' + sentence)
-    #             sentence = sentence.upper()
-    #             send_msg(server_socket, sentence)
 
 
 def tcp_client(host='127.0.0.1', port=12345):
