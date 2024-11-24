@@ -1,5 +1,7 @@
 from socket import *
 import threading
+import queue
+from multiprocessing import Queue, shared_memory, Semaphore
 
 
 def create_socket():
@@ -13,16 +15,12 @@ def client_connect(server_name: str, server_port: int):
     return client_socket
 
 
-def server_connect(server_name, server_port: int):
+def server_listen_at(server_name, server_port: int):
     server_socket = create_socket()
     server_socket.bind((server_name, server_port))
     server_socket.listen(1)
     print('The server is ready to receive')
     return server_socket
-
-
-# def server_accept(server_socket):
-#     server_socket.accept()
 
 
 def send_msg(socket, msg: str):
@@ -38,40 +36,42 @@ def rcv_msg(socket, buff_size: int = 1024):
     return rcvd_msg
 
 
-def run_client(server_name: str, server_port: int):
-    with client_connect(server_name,server_port) as client_socket:
-        while True:
-            message = input("Enter message to send: ")
-            send_msg(client_socket, message)
-            server_response = rcv_msg(client_socket, 1024)
-            print(f"Received from server: {server_response}")
+def handle_server_side_connection(conn, addr, queue):
+    while True:
+        if not rcv_msg(conn, 1024): continue  # prevent spurious empty messages/bits from being added to queue
+        queue.append(rcv_msg(conn, 1024))
+        # print(f'Message from {addr}: ' + sentence)
+        # sentence = sentence.upper()
+        # send_msg(conn, sentence)
+        print(len(queue))
 
+
+def handle_client_side_connection(server_socket):
+    while True:
+        message = input("Enter message to send: ")
+        if message == 'exit':
+            break
+        send_msg(server_socket, message)
+        server_response = rcv_msg(server_socket, 1024)
+        print(f"Received from server: {server_response}")
+
+
+def run_client(server_name: str, server_port: int):
+    """ connect to <host> on <port> """
+    # client_socket = client_connect(server_name, server_port)
+    with client_connect(server_name, server_port) as client_socket:
+        print("Connected to server!")
+        handle_client_side_connection(client_socket)
+        client_socket.close()
 
 
 def run_server(server_name: str, server_port: int):
     """ listen here  on <host> for <incoming ip request> at <port> """
-    with server_connect(server_name, server_port) as server_socket:
-        """
-          Thread: if server accepts a connection:
-                    then create a new thread to handle the connection
-                    t1 maintains TCP connection with <client> and sends/receives data
-
-                    when client disconnects:
-                     t1 closes the connection (by killing thread)
-        """
-        # with server_socket.accept() as (conn, addr):
-        #     while True:
-        #         sentence = rcv_msg(conn, 1024)
-        #         print(f'Message from {addr}: ' + sentence)
-        #         sentence = sentence.upper()
-        #         send_msg(server_socket, sentence)
-        while True:
-            conn, addr = server_socket.accept()
-            sentence = rcv_msg(conn, 1024)
-            print(f'Message from {addr}: ' + sentence)
-            sentence = sentence.upper()
-            send_msg(server_socket, sentence)
-
+    # with server_listen_at(server_name, server_port) as server_socket:
+    server_socket = server_listen_at(server_name, server_port)
+    conn, addr = server_socket.accept()
+    handle_server_side_connection(conn, addr, [])  # start server with empty queue
+    conn.close()
 
 
 def tcp_client(host='127.0.0.1', port=12345):
