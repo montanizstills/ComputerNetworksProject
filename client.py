@@ -1,5 +1,4 @@
-# from tcp_helper import *
-#
-#
-#  if __name__ == '__main__':
-#      run_client('https://csci-6731-webserver.onrender.com', 11001)
+from tcp_helper import *
+
+if __name__ == '__main__':
+    udp_client_2("h8h37X30y-mR89UXOr22psGwTbc2aumadleoPLAqmmI=")
